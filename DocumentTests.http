@@ -1,0 +1,143 @@
+@baseUrl = https://localhost:7000
+
+# Mock Authentication Headers
+# Admin user
+@adminUserId = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+@adminRole = Admin
+@adminDeptId = 11111111-1111-1111-1111-111111111111
+
+# Editor user
+@editorUserId = bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+@editorRole = Editor
+@editorDeptId = 22222222-2222-2222-2222-222222222222
+
+# Viewer user
+@viewerUserId = cccccccc-cccc-cccc-cccc-cccccccccccc
+@viewerRole = Viewer
+@viewerDeptId = 33333333-3333-3333-3333-333333333333
+
+###
+# Get all documents (as Admin)
+GET {{baseUrl}}/api/documents?page=1&pageSize=20
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Get documents filtered by category (as Editor)
+GET {{baseUrl}}/api/documents?page=1&pageSize=20&category=Finance
+X-User-Id: {{editorUserId}}
+X-User-Role: {{editorRole}}
+X-Department-Id: {{editorDeptId}}
+
+###
+# Get documents as Viewer (should only see HR department documents)
+GET {{baseUrl}}/api/documents
+X-User-Id: {{viewerUserId}}
+X-User-Role: {{viewerRole}}
+X-Department-Id: {{viewerDeptId}}
+
+###
+# Get single document by ID
+GET {{baseUrl}}/api/documents/d1111111-1111-1111-1111-111111111111
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Create a new document
+POST {{baseUrl}}/api/documents
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+Content-Type: application/json
+
+{
+  "title": "Q4 Financial Report",
+  "description": "Quarterly financial summary for Q4 2024",
+  "category": "Finance",
+  "tags": ["quarterly", "financial", "2024"],
+  "departmentId": "22222222-2222-2222-2222-222222222222"
+}
+
+###
+# Update a document (as Editor)
+PUT {{baseUrl}}/api/documents/d1111111-1111-1111-1111-111111111111
+X-User-Id: {{editorUserId}}
+X-User-Role: {{editorRole}}
+X-Department-Id: {{editorDeptId}}
+Content-Type: application/json
+
+{
+  "title": "Q4 Financial Report - Updated",
+  "description": "Updated quarterly financial summary for Q4 2024",
+  "category": "Finance",
+  "tags": ["quarterly", "financial", "2024", "updated"]
+}
+
+###
+# Try to update as Viewer (should fail with 403)
+PUT {{baseUrl}}/api/documents/d1111111-1111-1111-1111-111111111111
+X-User-Id: {{viewerUserId}}
+X-User-Role: {{viewerRole}}
+X-Department-Id: {{viewerDeptId}}
+Content-Type: application/json
+
+{
+  "title": "Should not work"
+}
+
+###
+# Delete a document (as Admin)
+DELETE {{baseUrl}}/api/documents/d5555555-5555-5555-5555-555555555555
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Download a document
+GET {{baseUrl}}/api/documents/d1111111-1111-1111-1111-111111111111/download
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Try to download document from another department as Viewer (should get 404)
+GET {{baseUrl}}/api/documents/d1111111-1111-1111-1111-111111111111/download
+X-User-Id: {{viewerUserId}}
+X-User-Role: {{viewerRole}}
+X-Department-Id: {{viewerDeptId}}
+
+###
+# Viewer downloads document from their own department
+GET {{baseUrl}}/api/documents/d3333333-3333-3333-3333-333333333333/download
+X-User-Id: {{viewerUserId}}
+X-User-Role: {{viewerRole}}
+X-Department-Id: {{viewerDeptId}}
+
+###
+# Test authentication failure - Missing X-User-Id header (should return 401)
+GET {{baseUrl}}/api/documents
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Test authentication failure - Invalid User ID GUID (should return 401)
+GET {{baseUrl}}/api/documents
+X-User-Id: invalid-guid
+X-User-Role: {{adminRole}}
+X-Department-Id: {{adminDeptId}}
+
+###
+# Test authentication failure - Invalid Role (should return 401)
+GET {{baseUrl}}/api/documents
+X-User-Id: {{adminUserId}}
+X-User-Role: SuperAdmin
+X-Department-Id: {{adminDeptId}}
+
+###
+# Test authentication failure - Invalid Department ID GUID (should return 401)
+GET {{baseUrl}}/api/documents
+X-User-Id: {{adminUserId}}
+X-User-Role: {{adminRole}}
+X-Department-Id: not-a-guid
