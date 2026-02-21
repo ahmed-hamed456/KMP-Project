@@ -18,89 +18,124 @@ public class DocumentService : IDocumentService
     
     public async Task<PagedResultDto<DocumentDto>> GetDocumentsAsync(int page, int pageSize, string? category, ClaimsPrincipal user)
     {
-        var (userId, role, departmentId) = ExtractUserInfo(user);
-        
-        // Validate and constrain pagination
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-        
-        var (documents, totalCount) = await _repository.GetAllAsync(page, pageSize, category, departmentId, role);
-        
-        return new PagedResultDto<DocumentDto>
+        try
         {
-            Items = documents.Select(MapToDto).ToList(),
-            TotalCount = totalCount,
-            Page = page,
-            PageSize = pageSize
-        };
+            var (userId, role, departmentId) = ExtractUserInfo(user);
+            
+            // Validate and constrain pagination
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            
+            var (documents, totalCount) = await _repository.GetAllAsync(page, pageSize, category, departmentId, role);
+            
+            return new PagedResultDto<DocumentDto>
+            {
+                Items = documents.Select(MapToDto).ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error retrieving documents: {ex.Message}", ex);
+        }
     }
     
     public async Task<DocumentDto?> GetDocumentByIdAsync(Guid id, ClaimsPrincipal user)
     {
-        var (userId, role, departmentId) = ExtractUserInfo(user);
-        
-        var document = await _repository.GetByIdAsync(id, departmentId, role);
-        
-        return document != null ? MapToDto(document) : null;
+        try
+        {
+            var (userId, role, departmentId) = ExtractUserInfo(user);
+            
+            var document = await _repository.GetByIdAsync(id, departmentId, role);
+            
+            return document != null ? MapToDto(document) : null;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error retrieving document with ID {id}: {ex.Message}", ex);
+        }
     }
     
     public async Task<DocumentDto> CreateDocumentAsync(CreateDocumentDto dto, ClaimsPrincipal user)
     {
-        var (userId, role, departmentId) = ExtractUserInfo(user);
-        
-        // Create a sample file path based on category (files should be pre-seeded)
-        var fileName = $"{dto.Category.ToLower()}-{Guid.CreateVersion7()}.pdf";
-        
-        var document = new Document
+        try
         {
-            Id = Guid.CreateVersion7(),
-            Title = dto.Title,
-            Description = dto.Description,
-            Category = dto.Category,
-            Tags = dto.Tags ?? new List<string>(),
-            FilePath = fileName,
-            FileSize = 524288, // Mock file size
-            MimeType = "application/pdf", // Mock MIME type
-            DepartmentId = dto.DepartmentId,
-            CreatedBy = userId
-        };
-        
-        var created = await _repository.CreateAsync(document);
-        return MapToDto(created);
+            var (userId, role, departmentId) = ExtractUserInfo(user);
+            
+            // Create a sample file path based on category (files should be pre-seeded)
+            var fileName = $"{dto.Category.ToLower()}-{Guid.CreateVersion7()}.pdf";
+            
+            var document = new Document
+            {
+                Id = Guid.CreateVersion7(),
+                Title = dto.Title,
+                Description = dto.Description,
+                Category = dto.Category,
+                Tags = dto.Tags ?? new List<string>(),
+                FilePath = fileName,
+                FileSize = 524288, // Mock file size
+                MimeType = "application/pdf", // Mock MIME type
+                DepartmentId = dto.DepartmentId,
+                CreatedBy = userId
+            };
+            
+            var created = await _repository.CreateAsync(document);
+            return MapToDto(created);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error creating document '{dto.Title}': {ex.Message}", ex);
+        }
     }
     
     public async Task<DocumentDto?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto, ClaimsPrincipal user)
     {
-        var (userId, role, departmentId) = ExtractUserInfo(user);
-        
-        var document = await _repository.GetByIdAsync(id, departmentId, role);
-        if (document == null)
+        try
         {
-            return null;
+            var (userId, role, departmentId) = ExtractUserInfo(user);
+            
+            var document = await _repository.GetByIdAsync(id, departmentId, role);
+            if (document == null)
+            {
+                return null;
+            }
+            
+            // Update only provided fields
+            if (!string.IsNullOrWhiteSpace(dto.Title))
+                document.Title = dto.Title;
+            
+            if (dto.Description != null)
+                document.Description = dto.Description;
+            
+            if (!string.IsNullOrWhiteSpace(dto.Category))
+                document.Category = dto.Category;
+            
+            if (dto.Tags != null)
+                document.Tags = dto.Tags;
+            
+            var updated = await _repository.UpdateAsync(document);
+            return MapToDto(updated);
         }
-        
-        // Update only provided fields
-        if (!string.IsNullOrWhiteSpace(dto.Title))
-            document.Title = dto.Title;
-        
-        if (dto.Description != null)
-            document.Description = dto.Description;
-        
-        if (!string.IsNullOrWhiteSpace(dto.Category))
-            document.Category = dto.Category;
-        
-        if (dto.Tags != null)
-            document.Tags = dto.Tags;
-        
-        var updated = await _repository.UpdateAsync(document);
-        return MapToDto(updated);
+        catch (Exception ex)
+        {
+            throw new Exception($"Error updating document with ID {id}: {ex.Message}", ex);
+        }
     }
     
     public async Task<bool> DeleteDocumentAsync(Guid id, ClaimsPrincipal user)
     {
-        var (userId, role, departmentId) = ExtractUserInfo(user);
-        
-        return await _repository.DeleteAsync(id, departmentId, role);
+        try
+        {
+            var (userId, role, departmentId) = ExtractUserInfo(user);
+            
+            return await _repository.DeleteAsync(id, departmentId, role);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error deleting document with ID {id}: {ex.Message}", ex);
+        }
     }
     
     private (Guid userId, string role, Guid? departmentId) ExtractUserInfo(ClaimsPrincipal user)

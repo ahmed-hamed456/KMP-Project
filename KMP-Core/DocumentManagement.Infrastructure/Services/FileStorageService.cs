@@ -30,23 +30,44 @@ public class FileStorageService : IFileStorageService
     
     public Task<string> GetFilePathAsync(string fileName)
     {
-        var fullPath = Path.Combine(_storageBasePath, fileName);
-        return Task.FromResult(fullPath);
+        try
+        {
+            var fullPath = Path.Combine(_storageBasePath, fileName);
+            return Task.FromResult(fullPath);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error getting file path for '{fileName}': {ex.Message}", ex);
+        }
     }
     
     public Task<bool> FileExistsAsync(string filePath)
     {
-        return Task.FromResult(File.Exists(filePath));
+        try
+        {
+            return Task.FromResult(File.Exists(filePath));
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error checking file existence at '{filePath}': {ex.Message}", ex);
+        }
     }
     
     public Task<Stream> GetFileStreamAsync(string filePath)
     {
-        if (!File.Exists(filePath))
+        try
         {
-            throw new FileNotFoundException("File not found", filePath);
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException("File not found", filePath);
+            }
+            
+            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return Task.FromResult<Stream>(stream);
         }
-        
-        var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return Task.FromResult<Stream>(stream);
+        catch (Exception ex)
+        {
+            throw new Exception($"Error getting file stream for '{filePath}': {ex.Message}", ex);
+        }
     }
 }
